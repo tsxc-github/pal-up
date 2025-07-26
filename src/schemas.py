@@ -13,10 +13,6 @@ class UserCreate(UserBase):
     birthyear: int
 class UserLogin(UserBase):
     password: str
-class User(UserBase):
-    pass
-    class Config:
-        from_attributes = True
 
 
 class UserProfileCreate(BaseModel):

@@ -1,9 +1,11 @@
 import datetime
 import hashlib
+import json
 import os
 from concurrent.futures import ThreadPoolExecutor, Future
 from datetime import date, time
 from http.client import responses
+import re
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import time
@@ -110,11 +112,15 @@ def create_user(response: Response, user: UserCreate, db: Session = Depends(get_
 
 
 @app.get("/api/account")
-def get_user(user_id: int | None = Cookie(default=None), db: Session = Depends(get_db)):
-    user = db.query(UserProfile).filter_by(id=user_id).first()
+def get_user(response: Response,email: str, password: str,user_id: str | None = Cookie(default=None), db: Session = Depends(get_db)):
+    user = db.query(User).filter_by(email=email).first()
     if user is None:
-        raise HTTPException(status_code=403, detail="?")
-    return user
+        raise HTTPException(status_code=403, detail="看看你的email")
+    if user.password != password:
+        raise HTTPException(status_code=403, detail="Invalid credentials")
+    userProfile = db.query(UserProfile).filter_by(id=user.id).first()
+    response.set_cookie("user_id", str(user.id))
+    return userProfile
 
 
 @app.post("/api/avatar")
@@ -214,13 +220,7 @@ def get_trip(user_id: int | None = Cookie(default=None), db: Session = Depends(g
 
 
 def to_list(text: str):
-    try:
-        res = text.strip('[').strip(']').split(',')
-    except:
-        return []
-    if res[0] == "":
-        return []
-    return res
+    return re.split(r'[;,]', text.strip("```json").strip("```").strip("\n").strip("[").strip("]"))
 
 
 @app.get("/api/trip/tags")
@@ -243,11 +243,11 @@ def get_trip_by_id(trip_id: int, db: Session = Depends(get_db)):
 
 
 def get_partners(trip_id: int, db: Session = Depends(get_db)):
-    trip = db.query(Trip).filter_by(id=trip_id).filter_by(is_public=True).with_for_update().first()
+    trip = db.query(Trip).filter_by(id=trip_id).with_for_update().first()
     if trip.partners is not None:
-        return trip.partners
+        return to_list(trip.partners)
 
-    trips = db.query(Trip).filter_by(activity_id=trip.activity_id).filter(Trip.id != trip.id)
+    trips = db.query(Trip).filter_by(activity_id=trip.activity_id).filter_by(is_public=True).filter(Trip.id != trip.id)
     trips = trips.filter_by(time=trip.time).all()
 
     partner = []
@@ -256,9 +256,9 @@ def get_partners(trip_id: int, db: Session = Depends(get_db)):
 
     trip.partners = ai.get_partners(get_trip_tags(trip.id, db), partner)
     db.commit()
-    return trip.partners
+    return partner
 
-pool = ThreadPoolExecutor(max_workers=5, thread_name_prefix='Thread')
+pool = ThreadPoolExecutor(max_workers=50, thread_name_prefix='Thread')
 def get_suggestion(trip_id: int, db: Session = Depends(get_db)):
     trip = db.query(Trip).filter_by(id=trip_id).with_for_update().first()
     if trip.suggestions is not None:
@@ -267,22 +267,25 @@ def get_suggestion(trip_id: int, db: Session = Depends(get_db)):
     tasks = []
 
 
-    for i in to_list(trip.partners):
+    for i in get_partners(trip_id, db):
         def add(partnerId:int,tripText:str,partnerText:str):
             suggestionsText=ai.get_suggestion(tripText, partnerText)
-            trip_=get_trip_by_id(partnerId,db)
-            user=get_user(trip.owner,db)
             suggestions.append({
-
                 "trip_id": partnerId,
                 "suggestion": suggestionsText
             })
+            return True
+        if type(i) is not int:
+            try:
+                i = int(i)
+            except ValueError:
+                continue
+        # tasks.append(pool.submit(add(i,trip.text,get_trip_by_id(i, db).text)))
+        add(i,trip.text,get_trip_by_id(i, db).text)
+        
 
-
-        tasks.append(pool.submit(add,i,trip.text,get_trip_by_id(i, db).text))
-
-    for task in tasks:
-        task.result()
+    # for task in tasks:
+    #     task.result()
 
     trip.suggestions = suggestions
     db.commit()

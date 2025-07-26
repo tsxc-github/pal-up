@@ -1,5 +1,5 @@
 import os
-PIPO_TOKEN=os.environ.get("PIPO_TOKEN")
+PIPO_TOKEN=os.environ.get("PIPO_TOKEN","sk_J1yUDeP8XfGr8_aX5m7ybvpWhQpQcK7mevxq-lFzzvo")
 
 
 from openai import OpenAI
@@ -18,7 +18,7 @@ def GetLLMOutput(system_content,user_content,temperature=1.0):
         api_key=PIPO_TOKEN,
     )
     result = client.chat.completions.create(
-        model="moonshotai/kimi-k2-instruct",
+        model="deepseek/deepseek-v3-0324",
         messages=[
             {"role": "system", "content": system_content},
             {"role": "user", "content": user_content},
@@ -32,7 +32,7 @@ def get_tags(text:str):
 你是一名「搭子匹配官」。用户的输入可能是一段找搭子的要求，也可能是自我介绍。你的任务是：
 
 提炼关键信息并生成「匹配 Tag」；
-按优先级输出 Tag（最多 20 个，用JSON格式）；
+按优先级输出 Tag（最多 20 个，不能为空！！用JSON格式）；
 禁止编造；禁止输出解释。
 Tag 生成规则
 活动类型：用 1-2 个词概括（例：citywalk、羽毛球、自习、摄影、剧本杀、考研、飞盘、搓饭、小龙虾）。
@@ -52,16 +52,14 @@ Tag 生成规则
 
 示例输入 & 输出
 
-输入：
+输入：女生，INFJ，坐标广州天河，想找一起夜跑或爬山的搭子，最好也是女生，时间工作日晚上 7 点后，AA 制，希望对方不鸽，能互相督促。
 
-“女生，INFJ，坐标广州天河，想找一起夜跑或爬山的搭子，最好也是女生，时间工作日晚上 7 点后，AA 制，希望对方不鸽，能互相督促。”
+输出：[夜跑,工作日晚上,广州·天河,入门,i人,女,23-26,AA,互相督促,INFJ]
 
-输出：
-
-[夜跑,工作日晚上,广州·天河,入门,i人,女,23-26,AA,互相督促,INFJ]
+注意，仅输出JSON本身，不含其他任何字段。
     """
 
-    return GetLLMOutput(system_content,text,1.5)
+    return GetLLMOutput(system_content,text,0)
 
 def get_partners(usertag:list,people:list):
     system_content="""    
@@ -74,11 +72,13 @@ def get_partners(usertag:list,people:list):
 可用搭子：[{"id": 1, "tags": ["羽毛球","弹性","北京·海淀","新手","e人","不限","18-22","AA"]},}]
 ```
 示例输出：[1]
+
+注意，仅输出JSON本身，不含其他任何字段。
     """
     return GetLLMOutput(system_content,f"""
 用户Tag：{usertag}
 可用搭子：{people}
-""",1)
+""",0)
 
 def get_suggestion(userInfo:str,othersInfo:str):
     system_content="""
@@ -94,6 +94,7 @@ def get_suggestion(userInfo:str,othersInfo:str):
 ```txt
 想找一个周末在上海徐汇区吃小龙虾的搭子，时间偏好周末，地点上海·徐汇，技能水平新手，社交属性e人，性别女，年龄22，费用AA是，特殊需求可带宠物、拍照搭子、打卡，个人亮点会摄影。
 ```
+
     """
     return GetLLMOutput(system_content,f"""
 用户：
@@ -104,7 +105,7 @@ def get_suggestion(userInfo:str,othersInfo:str):
 ```txt
 {othersInfo}
 ```
-""",1)
+""",0.2)
 
 if __name__ == "__main__":
     print(get_tags("""周末想找个人一起打羽毛球，地点最好在北京·海淀，我是新手，希望对方也是新手或者入门水平，性格最好是e人，性别不限，年龄18岁，费用AA。"""))
