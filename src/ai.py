@@ -18,7 +18,7 @@ def GetLLMOutput(system_content,user_content,temperature=1.0):
         api_key=PIPO_TOKEN,
     )
     result = client.chat.completions.create(
-        model="deepseek/deepseek-v3-0324",
+        model="moonshotai/kimi-k2-instruct",
         messages=[
             {"role": "system", "content": system_content},
             {"role": "user", "content": user_content},
