@@ -6,6 +6,8 @@ import os
 from concurrent.futures import ThreadPoolExecutor, Future
 from datetime import date, time
 from http.client import responses
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import ARRAY
 import time
 from PIL import Image
@@ -25,7 +27,7 @@ from src.schemas import UserProfileCreate, UserCreate, UserLogin, ActivityCreate
 
 app = FastAPI()
 
-database_url: str = os.environ.get("DATABASE_URL")
+database_url: str = os.environ.get("DATABASE_URL", "postgresql://adventurex:adventurex@localhost:5432/adventurex")
 
 engine = create_engine(database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -39,24 +41,42 @@ def get_db() -> Generator[Session, Any, None]:
         yield db
     finally:
         db.close()
+        
+        
 
 
-@app.get("/")
-async def read_root():
-    return {"message": "Welcome to the FastAPI application!"}
+# @app.get("/")
+# def read_index():
+#     return FileResponse("./static/index.html")
 
+# app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = time.perf_counter()
-    if request.url.path != "/api/login" and request.url.path != "/api/register":
-        if request.cookies.get("user_id") is None:
-            return Response(headers={"Location": "/login"}, status_code=403)
+    
+    
+    # 如果是静态文件，直接交给StaticFiles
+    if request.url.path.startswith("/static"):
+        return await call_next(request)
+    if os.path.exists('./static'+request.url.path+"index.html"):
+        return FileResponse('./static'+request.url.path+"index.html")
+    if os.path.exists('./static'+request.url.path):
+        return FileResponse('./static'+request.url.path)
+    
+    
+    # if request.url.path != "/api/login" and request.url.path != "/api/register":
+    #     if request.cookies.get("user_id") is None:
+    #         return Response(headers={"Location": "/login"}, status_code=403)
     response = await call_next(request)
     process_time = time.perf_counter() - start_time
     response.headers["X-Process-Time"] = str(process_time)
     return response
 
+
+@app.get("/api")
+def read_root():
+    return {"message": "Welcome to the AdventureX API"}
 
 @app.post("/api/login")
 async def login(response: Response, user: UserLogin, db: Session = Depends(get_db)):
