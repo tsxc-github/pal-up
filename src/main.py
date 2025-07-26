@@ -56,15 +56,15 @@ async def add_process_time_header(request: Request, call_next):
     # 如果是静态文件，直接交给StaticFiles
     if request.url.path.startswith("/static"):
         return await call_next(request)
-    if os.path.exists('./static'+request.url.path+"index.html"):
-        return FileResponse('./static'+request.url.path+"index.html")
+    if os.path.exists('./static'+request.url.path+'\\'+"index.html"):
+        return FileResponse('./static'+request.url.path+'\\'+"index.html")
     if os.path.exists('./static'+request.url.path):
         return FileResponse('./static'+request.url.path)
     
     
-    # if request.url.path != "/api/login" and request.url.path != "/api/register":
-    #     if request.cookies.get("user_id") is None:
-    #         return Response(headers={"Location": "/login"}, status_code=403)
+    if request.url.path != "/api/login" and request.url.path != "/api/register":
+        if request.cookies.get("user_id") is None:
+            return Response(headers={"Location": "/login"}, status_code=403)
     response = await call_next(request)
     process_time = time.perf_counter() - start_time
     response.headers["X-Process-Time"] = str(process_time)
