@@ -112,6 +112,8 @@ def create_user(response: Response, user: UserCreate, db: Session = Depends(get_
 @app.get("/api/account")
 def get_user(user_id: int | None = Cookie(default=None), db: Session = Depends(get_db)):
     user = db.query(UserProfile).filter_by(id=user_id).first()
+    if user is None:
+        raise HTTPException(status_code=403, detail="?")
     return user
 
 
