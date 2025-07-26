@@ -122,6 +122,13 @@ def get_user(response: Response,email: str, password: str,user_id: str | None = 
     response.set_cookie("user_id", str(user.id))
     return userProfile
 
+# 根据用户id获取用户信息
+def get_userProfile_byid(user_id: int, db: Session = Depends(get_db)):
+    # 从数据库中查询用户信息
+    user = db.query(UserProfile).filter_by(id=user_id).first()
+    # 返回查询到的用户信息
+    return user
+
 
 @app.post("/api/avatar")
 async def upload_avatar(file: UploadFile, db: Session = Depends(get_db)):
@@ -277,8 +284,8 @@ def get_suggestion(trip_id: int, db: Session = Depends(get_db)):
             return True
         if type(i) is not int:
             try:
-                i = int(i)
-            except ValueError:
+                i = i["id"]
+            except:
                 continue
         # tasks.append(pool.submit(add(i,trip.text,get_trip_by_id(i, db).text)))
         add(i,trip.text,get_trip_by_id(i, db).text)
@@ -299,5 +306,5 @@ def get_suggestions(trip_id: int, db: Session = Depends(get_db)):
     for suggestion in suggestions:
         suggestion["trip"]=get_trip_by_id(suggestion["trip_id"], db)
         suggestion["activity"]=get_activity_by_id(suggestion["trip"].activity_id, db)
-        suggestion["user"]=get_user(suggestion["trip"].owner, db)
+        suggestion["user"]=get_userProfile_byid(suggestion["trip"].owner, db)
     return suggestions
