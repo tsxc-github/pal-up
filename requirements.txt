@@ -1,0 +1,3 @@
+FastAPI~=0.116.1
+Uvicorn
+databases~=0.9.0
