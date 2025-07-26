@@ -62,7 +62,7 @@ async def add_process_time_header(request: Request, call_next):
         return FileResponse('./static'+request.url.path)
     
     
-    if request.url.path != "/api/login" and request.url.path != "/api/register" and request.url.path != "/api/avatar":
+    if request.url.path != "/api/login" and request.url.path != "/api/register" and request.url.path != "/api/avatar" and request.url.path != "/api/activity" and request.url.path != "/api/account":
         if request.cookies.get("user_id") is None:
             return Response(headers={"Location": "/login"}, status_code=403)
     response = await call_next(request)
