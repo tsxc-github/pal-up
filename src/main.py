@@ -25,7 +25,7 @@ from src.schemas import UserProfileCreate, UserCreate, UserLogin, ActivityCreate
 
 app = FastAPI()
 
-database_url: str = "postgresql://adventurex:adventurex@localhost:5432/adventurex"
+database_url: str = os.environ.get("DATABASE_URL")
 
 engine = create_engine(database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

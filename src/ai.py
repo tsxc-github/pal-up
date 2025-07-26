@@ -1,4 +1,5 @@
-PIPO_TOKEN=""
+import os
+PIPO_TOKEN=os.environ.get("PIPO_TOKEN")
 
 
 from openai import OpenAI
